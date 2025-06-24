@@ -38,12 +38,7 @@ namespace Band.Platform2D.Actions
         // Update is called once per frame
         protected virtual void Update()
         {
-            inputs.Clear();
-        }
-
-        protected virtual void FixedUpdate()
-        {
-            //inputs.Clear();
+           // inputs.Clear();
         }
 
         public void SetInput(object value)
@@ -93,6 +88,15 @@ namespace Band.Platform2D.Actions
             triggerEvent.Invoke(collision);
         }
 
+        public void AddOnActionStartedEvent(UnityAction action)
+        {
+            onActionStarted.AddListener(action);
+        }
+
+        public void AddOnActionFinishedEvent(UnityAction action)
+        {
+            onActionFinished.AddListener(action);
+        }
     }
 
 }

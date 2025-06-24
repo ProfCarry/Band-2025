@@ -1,3 +1,4 @@
+using Band.Extensions;
 using System;
 using UnityEngine;
 
@@ -32,8 +33,6 @@ namespace Band.Platform2D.Actions
             if (Vector3.Dot(inputVector.normalized,this.transform.right) != 0)
                 StartMovement(inputVector);
             else StopMovement(inputVector);
-            output = velocity;
-         //   base.Update();
         }
 
         private void StopMovement(Vector3 inputVector)
@@ -45,7 +44,13 @@ namespace Band.Platform2D.Actions
         private void StartMovement(Vector3 vector)
         {
             velocity = vector.normalized * Mathf.MoveTowards(vector.magnitude, speed * vector.magnitude, acceleration * Time.fixedDeltaTime);
-            //velocity = rigidBody.linearVelocity + (Vector2) vector * speed;
+        }
+
+        private void FixedUpdate()
+        {
+            Vector3 vector = rigidBody.linearVelocity;
+            rigidBody.linearVelocity = new Vector2(velocity.x, rigidBody.linearVelocityY);
+
         }
     }
 

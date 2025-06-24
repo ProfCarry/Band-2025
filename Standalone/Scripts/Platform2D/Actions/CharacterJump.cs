@@ -1,22 +1,21 @@
 using Band.Components;
+using Band.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using Unity.VisualScripting;
+
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Band.Platform2D.Actions
 {
-    //[RequireComponent(typeof(ConstantForce2D))]
+    [RequireComponent(typeof(ConstantForce2D))]
     [RequireComponent(typeof(Collider2D))]
     public class CharacterJump : CharacterAction
     {
-        [SerializeField]
-        private Vector3 gravity;
 
         [SerializeField]
         private float jumpHeight;
@@ -28,16 +27,17 @@ namespace Band.Platform2D.Actions
         [SerializeField]
         private LayerMask groundLayerMask;
 
-        //private ConstantForce2D force;
-
         private Rigidbody2D rigidBody;
 
         private Collider2D collider;
-        public Vector3 jumpDirection { get { return -gravity.normalized; } }
 
         [SerializeField]
         [Range(0.1f, 10)]
         private float jumpWeight;
+
+        [SerializeField]
+        [Range(1f, 10)]
+        private float jumpBufferMultiplier;
 
         private bool wasJumping;
 
@@ -48,21 +48,16 @@ namespace Band.Platform2D.Actions
         [SerializeField]
         private float jumpTime;
 
-        private EnlargeReduce enlargeReduce;
-
         // Start is called once before the first execution of Update after the MonoBehaviour is created
         protected override void Start()
         {
             base.Start();
             velocity = Vector3.zero;
             grounded = false;
-            //force=this.GetComponent<ConstantForce2D>();
-            //force.force=gravity*weight;
             rigidBody = this.GetComponent<Rigidbody2D>();
             collider = this.GetComponent<Collider2D>();
             jumpTimer=this.GetComponentInChildren<BandTimer>();
             jumpTimer.AddTimeoutListener(OnTimeout);
-            enlargeReduce=this.GetComponent<EnlargeReduce>();   
         }
 
         // Update is called once per frame
@@ -78,55 +73,33 @@ namespace Band.Platform2D.Actions
                     onActionStarted.Invoke();
                 }
             }
-            else if (isJumping && Vector3.Dot(gravity.normalized, velocity.normalized) <= 0 && jumpTimer.IsRunning)
+            else if (isJumping && Vector3.Dot(-this.transform.up, velocity.normalized) <= 0 && jumpTimer.IsRunning)
                MantainJump();
-            //MantainJump();
             else StopJump();
-            DecreaseJump();
             CheckGround();
             output = velocity;
-            //base.Update();
         }
 
         private void ComputeJump()
         {
-            velocity =  (Vector2) jumpDirection * Mathf.Sqrt(2 * jumpHeight * Mathf.Abs(gravity.magnitude));
+            velocity =  (Vector2) this.transform.up * Mathf.Sqrt(2 * jumpHeight);
             jumpTimer.Run();
         }
 
         private void MantainJump()
         {
-            //velocity = rigidBody.linearVelocity;
-            //velocity = (Vector2)jumpDirection * Mathf.Sqrt(2 * jumpHeight * Mathf.Abs(gravity.magnitude));
-            //velocity += jumpDirection * (jumpHeight) * Time.fixedDeltaTime;
-            //velocity += jumpDirection * Mathf.Sqrt(2 * jumpHeight)
-            //    * Time.deltaTime * (1 - jumpTimer.CurrentTime/jumpTimer.TotalTime);
-            velocity += jumpDirection * jumpHeight * Time.deltaTime;
-
+            velocity += this.transform.up * jumpHeight * jumpBufferMultiplier*(1-jumpTimer.CurrentTime/jumpTimer.TotalTime)*Time.deltaTime;
         }
 
         private void StopJump()
         {
-            //velocity = rigidBody.linearVelocity;
-            //velocity = (Vector2)jumpDirection * Mathf.Sqrt(2 * jumpHeight * Mathf.Abs(gravity.magnitude));
             DecreaseJump();
-            //velocity = Vector3.zero;
             jumpTimer.Stop();
         }
 
         private void DecreaseJump()
         {
-            if(rigidBody.constraints.Equals(RigidbodyConstraints2D.FreezeRotation | (RigidbodyConstraints2D.FreezePositionX)) ||
-                rigidBody.constraints.Equals(RigidbodyConstraints2D.FreezeRotation | (RigidbodyConstraints2D.FreezePositionY)))
-            {
-                velocity = Vector3.zero;
-            }
-            else
-            {
-                velocity += gravity.normalized * (gravity.magnitude * (jumpWeight + enlargeReduce.Weight)) * Time.deltaTime;
-                if (velocity.magnitude > (gravity.magnitude + jumpWeight))
-                    velocity = velocity.normalized * gravity.magnitude;
-            }
+            velocity = Vector3.zero;
         }
 
         private void OnTimeout()
@@ -152,8 +125,7 @@ namespace Band.Platform2D.Actions
                     grounded = true;
                     onActionFinished.Invoke();
                 }
-                    //grounded = Physics2D.Raycast(position, gravity.normalized * (0.1f + transform.localScale.magnitude) / 2, groundLayerMask);
-                Debug.DrawRay(position, gravity.normalized * transform.localScale.magnitude / 2, grounded ? UnityEngine.Color.green : UnityEngine.Color.red);
+                Debug.DrawRay(position, -this.transform.up.normalized * transform.localScale.magnitude / 2, grounded ? UnityEngine.Color.green : UnityEngine.Color.red);
             }
         }
 
@@ -165,7 +137,7 @@ namespace Band.Platform2D.Actions
             CapsuleCollider2D collider = this.GetComponent<CapsuleCollider2D>();
             Vector3 size = (this.transform.localScale * collider.size);
             Vector3 origin = (Vector2)this.transform.position + collider.offset * size.magnitude;
-            Vector3 direction = gravity.normalized * size.magnitude;
+            Vector3 direction = -this.transform.up.normalized * size.magnitude;
             Gizmos.color= grounded ? UnityEngine.Color.green: UnityEngine.Color.red;
             Gizmos.DrawWireCube(origin, size);
         }
@@ -177,7 +149,16 @@ namespace Band.Platform2D.Actions
             Vector2 position=collider.offset + (Vector2) this.transform.position;
             Vector3 vector=pointPosition - position;
             if (Vector3.Dot(vector.normalized, this.transform.up) > 0)
-                velocity=Vector3.zero;
+                StopJump();
+        }
+
+        private void FixedUpdate()
+        {
+            if(velocity.magnitude!=0)
+            {
+                Vector3 vector = rigidBody.linearVelocity;
+                rigidBody.linearVelocity = new Vector2(rigidBody.linearVelocity.x, velocity.y);
+            }
         }
     }
 }

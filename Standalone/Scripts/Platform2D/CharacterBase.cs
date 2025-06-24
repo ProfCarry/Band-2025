@@ -38,15 +38,6 @@ namespace Band.Platform2D.Character
             
         }
 
-        private void FixedUpdate()
-        {
-            velocity = actions.Select(a => a.GetOutput())
-                .Aggregate((acc, a) => acc + a);
-            //Vector3 newPos = this.transform.position + velocity * Time.fixedDeltaTime;
-            //rigidBody.MovePosition(newPos);
-            rigidBody.linearVelocity= velocity;
-            
-        }
 
         public void DoAction<TAction>(object input) where TAction : CharacterAction
         {
