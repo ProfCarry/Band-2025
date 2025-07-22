@@ -8,10 +8,10 @@ using UnityEngine.Events;
 using System;
 using System.Collections;
 
-namespace Band.Platform2D.Character
+namespace Band.Character
 {
     [RequireComponent(typeof(Rigidbody2D))]
-    public class CharacterBase : MonoBehaviour
+    public class CharacterBase2D : MonoBehaviour
     {
         protected List<CharacterAction> actions;
 
@@ -48,8 +48,8 @@ namespace Band.Platform2D.Character
 
         public void StopActions()
         {
-            foreach(var action in actions)
-                action.EraseInput();
+           // foreach(var action in actions)
+            //    action.EraseInput();
         }
 
         public void AddTriggerEvent(UnityAction<Collider2D> action)

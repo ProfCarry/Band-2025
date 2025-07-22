@@ -1,8 +1,9 @@
 
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Band.Utils.Execution
+namespace Band.Utils.Loading
 {
     public class SceneLoader : Loader
     {
@@ -12,12 +13,21 @@ namespace Band.Utils.Execution
         [SerializeField]
         private string scene;
 
+        [SerializeField]
+        private LoadSceneMode loadMode;
+
         public string ResourceScene { get { return scene; } set { scene = value; } }
 
-        public override object Load()
+        protected override IEnumerator AsyncLoad()
         {
-            SceneManager.LoadScene(scene);
-            return null;
+            AsyncOperation operation=SceneManager.LoadSceneAsync(ResourceScene, loadMode);
+            yield return new WaitUntil(()=>operation.isDone);
+
+        }
+
+        protected override void SyncLoad()
+        {
+            SceneManager.LoadScene(ResourceScene, loadMode);
         }
 
         private void Start()

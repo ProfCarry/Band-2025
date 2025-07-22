@@ -18,12 +18,16 @@ namespace Band.Platform2D.Actions
 
         private Rigidbody2D rigidBody;
 
+        [SerializeField]
+        private bool isTopDown;
+
         // Start is called once before the first execution of Update after the MonoBehaviour is created
         protected override void Start()
         {
             base.Start();
             rigidBody = this.GetComponent<Rigidbody2D>();
             velocity = rigidBody.linearVelocity;
+            
         }
 
         // Update is called once per frame
@@ -33,6 +37,8 @@ namespace Band.Platform2D.Actions
             if (Vector3.Dot(inputVector.normalized,this.transform.right) != 0)
                 StartMovement(inputVector);
             else StopMovement(inputVector);
+            if (output == Vector3.zero)
+                output = velocity;
         }
 
         private void StopMovement(Vector3 inputVector)
@@ -49,11 +55,13 @@ namespace Band.Platform2D.Actions
         private void FixedUpdate()
         {
             Vector3 vector = rigidBody.linearVelocity;
-            rigidBody.linearVelocity = new Vector2(velocity.x, rigidBody.linearVelocityY);
-
+            if (!isTopDown)
+                rigidBody.linearVelocity = new Vector2(velocity.x, rigidBody.linearVelocityY);
+            else
+                rigidBody.linearVelocity = output;
+            output = Vector3.zero;
         }
     }
-
     
 }
 

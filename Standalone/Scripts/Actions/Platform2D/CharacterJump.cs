@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UIElements;
 
 namespace Band.Platform2D.Actions
@@ -43,10 +44,32 @@ namespace Band.Platform2D.Actions
 
         private bool isJumping;
 
+        private bool canJump;
+
         private BandTimer jumpTimer;
+
+        private float coyoteTimer;
 
         [SerializeField]
         private float jumpTime;
+
+        [SerializeField]
+        private float coyoteTime;
+
+        private Vector3 gravity;
+        public Vector3 Gravity { get { return gravity; } set { gravity = value; } }
+
+        private BandTimer PrepareTimer(string name, float time,UnityAction action=null)
+        {
+
+            GameObject game=new GameObject(name);
+            game.transform.SetParent(this.transform);
+            BandTimer timer = game.AddComponent<BandTimer>();
+            timer.TotalTime = time;
+            if (action != null)
+                timer.AddTimeoutListener(action);
+            return timer;
+        }
 
         // Start is called once before the first execution of Update after the MonoBehaviour is created
         protected override void Start()
@@ -56,39 +79,46 @@ namespace Band.Platform2D.Actions
             grounded = false;
             rigidBody = this.GetComponent<Rigidbody2D>();
             collider = this.GetComponent<Collider2D>();
-            jumpTimer=this.GetComponentInChildren<BandTimer>();
-            jumpTimer.AddTimeoutListener(OnTimeout);
+            jumpTimer = PrepareTimer("JumpTimer", jumpTime,OnJumpTimerTimeout);
         }
 
         // Update is called once per frame
         protected override void Update()
         {
             wasJumping = isJumping;
+
             isJumping = GetInput<bool>();
             if (grounded)
             {
-                if (isJumping && !wasJumping)
-                { 
-                    ComputeJump();
-                    onActionStarted.Invoke();
-                }
+                coyoteTimer = 0;
             }
-            else if (isJumping && Vector3.Dot(-this.transform.up, velocity.normalized) <= 0 && jumpTimer.IsRunning)
+            else coyoteTimer += Time.deltaTime;
+
+            if (coyoteTimer < coyoteTime && isJumping && !wasJumping)
+            {
+                ComputeJump();
+                coyoteTimer = coyoteTime;
+                onActionStarted.Invoke();
+                //coyoteTimer.Stop();
+            }
+            else if (isJumping && Vector3.Dot(gravity, velocity.normalized) <= 0 && jumpTimer.IsRunning)
                MantainJump();
             else StopJump();
             CheckGround();
-            output = velocity;
+            if (output == Vector3.zero)
+                output = velocity;
+            
         }
 
         private void ComputeJump()
         {
-            velocity =  (Vector2) this.transform.up * Mathf.Sqrt(2 * jumpHeight);
+            velocity =  (Vector2) this.transform.up * Mathf.Sqrt(2 * jumpHeight*(-gravity).magnitude/2);
             jumpTimer.Run();
         }
 
         private void MantainJump()
         {
-            velocity += this.transform.up * jumpHeight * jumpBufferMultiplier*(1-jumpTimer.CurrentTime/jumpTimer.TotalTime)*Time.deltaTime;
+            velocity += this.transform.up * jumpHeight * jumpBufferMultiplier*(1-jumpTimer.CurrentTime/jumpTimer.TotalTime)*Time.deltaTime+(gravity / 2)*Time.deltaTime;
         }
 
         private void StopJump()
@@ -102,9 +132,14 @@ namespace Band.Platform2D.Actions
             velocity = Vector3.zero;
         }
 
-        private void OnTimeout()
+        private void OnJumpTimerTimeout()
         {
             StopJump();
+        }
+
+        private void OnCoyoteTimerTimeout()
+        {
+            canJump = false;
         }
 
         private void CheckGround()
@@ -159,6 +194,10 @@ namespace Band.Platform2D.Actions
                 Vector3 vector = rigidBody.linearVelocity;
                 rigidBody.linearVelocity = new Vector2(rigidBody.linearVelocity.x, velocity.y);
             }
+            /*if(rigidBody.linearVelocity.magnitude>gravity.magnitude && Vector3.Dot(rigidBody.linearVelocity,gravity)>0)
+            {
+                rigidBody.linearVelocity=gravity;
+            }*/
         }
     }
 }

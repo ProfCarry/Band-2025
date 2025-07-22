@@ -1,5 +1,5 @@
 using Band.Platform2D.Actions;
-using Band.Platform2D.Character;
+using Band.Character;
 using Band.Utils;
 using System.Collections.Generic;
 using System.Linq;

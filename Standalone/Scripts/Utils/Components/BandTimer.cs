@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -8,7 +9,7 @@ namespace Band.Components
         [SerializeField]
         private float time=1;
 
-        public float TotalTime {  get { return time; } }
+        public float TotalTime {  get { return time; } set { time = value; } }
 
         [SerializeField]
         private bool autostart;
@@ -34,6 +35,7 @@ namespace Band.Components
         public void Run()
         {
             state= State.Running;
+            Resume();
         }
 
         public void Pause()
@@ -44,6 +46,12 @@ namespace Band.Components
         public void Stop()
         { 
             state = State.Stop;
+            CurrentTime=TotalTime;
+            
+        }
+
+        public void Resume()
+        {
             CurrentTime = 0;
         }
 
@@ -52,10 +60,16 @@ namespace Band.Components
             timeoutHandler.AddListener(listener);
         }
 
+        private void Awake()
+        {
+            timeoutHandler = new UnityEvent();
+        }
+
         // Start
         // is called once before the first execution of Update after the MonoBehaviour is created
         void Start()
         {
+
             Stop();
             if (autostart)
                 Run();

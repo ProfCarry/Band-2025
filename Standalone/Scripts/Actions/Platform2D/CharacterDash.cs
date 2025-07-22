@@ -40,6 +40,9 @@ namespace Band.Platform2D.Actions
         [SerializeField]
         protected UnityEvent onDashTimeElapsed;
 
+        [SerializeField]
+        private bool isTopDown;
+
         protected override void Start()
         {
             base.Start();
@@ -96,7 +99,10 @@ namespace Band.Platform2D.Actions
             if(output.magnitude!=0)
             {
                 Vector3 vector = rigidbody.linearVelocity;
-                rigidbody.linearVelocity = new Vector2(output.x,rigidbody.linearVelocityY);
+                if (!isTopDown)
+                    rigidbody.linearVelocity = new Vector2(output.x, rigidbody.linearVelocityY);
+                else
+                    rigidbody.linearVelocity = output;
             }
         }
 

@@ -1,16 +1,23 @@
+using System.Collections;
 using UnityEngine;
 
-namespace Band.Utils.Execution
+namespace Band.Utils.Loading
 {
-    public abstract class Loader : Executor
+    public abstract class Loader : MonoBehaviour
     {
+        [SerializeField]
+        private bool useAsyncLoad;
 
-
-        public abstract object Load();
-
-        public override void Execute()
+        public void Load()
         {
-            Load();
+            if (useAsyncLoad)
+                StartCoroutine(AsyncLoad());
+            else SyncLoad();
         }
+
+        protected abstract void SyncLoad();
+
+        protected abstract IEnumerator AsyncLoad();
+
     }
 }

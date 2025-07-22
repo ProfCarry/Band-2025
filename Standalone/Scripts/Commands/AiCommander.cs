@@ -1,5 +1,5 @@
 using Band.Commands;
-using Band.Platform2D.Character;
+using Band.Character;
 using Band.Utils;
 using UnityEngine;
 
