@@ -62,7 +62,7 @@ namespace Band.Platform2D.Actions
             }
             catch(Exception e)
             {
-               // print(e.Message);
+                print(e.Message);
                 value = default(TInput);
             }
             return value;
