@@ -101,7 +101,7 @@ namespace Band.Platform2D.Actions
                 onActionStarted.Invoke();
                 //coyoteTimer.Stop();
             }
-            else if (isJumping && Vector3.Dot(gravity, velocity.normalized) <= 0 && jumpTimer.IsRunning)
+            else if (isJumping && Vector3.Dot(gravity.normalized, velocity.normalized) <= 0 && jumpTimer.IsRunning )
                MantainJump();
             else StopJump();
             CheckGround();
@@ -119,6 +119,8 @@ namespace Band.Platform2D.Actions
         private void MantainJump()
         {
             velocity += this.transform.up * jumpHeight * jumpBufferMultiplier*(1-jumpTimer.CurrentTime/jumpTimer.TotalTime)*Time.deltaTime+(gravity / 2)*Time.deltaTime;
+            if(velocity.y >= 2*jumpHeight)
+                velocity.y = 2*jumpHeight;
         }
 
         private void StopJump()
