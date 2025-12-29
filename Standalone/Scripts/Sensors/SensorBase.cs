@@ -1,17 +1,21 @@
-using System;
-using System.Collections;
-using System.Runtime.InteropServices.WindowsRuntime;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Band.Sensor
 {
+
     public abstract class SensorBase : MonoBehaviour
     {
         [SerializeField]
         private UnityEvent<GameObject> onSensorDetect;
 
+        [SerializeField]
+        private UnityEvent<GameObject> onSensorLost;
+
+
         public UnityEvent<GameObject> OnSensorDetect { get { return onSensorDetect; } }
+        public UnityEvent<GameObject> OnSensorLost { get { return onSensorLost; } }
 
         [SerializeField]
         private LayerMask detectionMask;
@@ -19,53 +23,59 @@ namespace Band.Sensor
         public LayerMask DetectionMask { get { return detectionMask; } set { detectionMask = value; } }
 
         [SerializeField]
-        private float detectionInterval = 0;
+        private LayerMask occlusionMask;
 
-        private GameObject lastDetectedObject;
+        public LayerMask OcclusionMask { get { return occlusionMask; } set { occlusionMask = value; } } 
 
         [SerializeField]
-        private bool autoActivate = false;
+        private float detectionInterval = 0;
 
-        public bool AutoActivate { get { return autoActivate; } set { autoActivate = value; } }
+        protected HashSet<Collider2D> candidates = new();
+        protected bool dirty = false;
+        private float lastZRotation;
+        private Vector2 lastPosition;
 
-        private Coroutine detectionCoroutine;
+        protected GameObject lastDetectedObject=null;
+
+        public void MarkDirty()
+        {
+            dirty = true;
+            Evaluate();
+        }
+
+        protected void Evaluate()
+        {
+            GameObject seen = Detect();
+            GameObject previous = lastDetectedObject;
+            if (seen != null)
+            {
+                if(previous!=seen)
+                    OnSensorDetect.Invoke(seen);
+                lastDetectedObject = seen;
+            }
+            else
+            {
+                if(previous != null)
+                    OnSensorLost.Invoke(previous);
+                lastDetectedObject = null;
+            }
+            dirty = false;
+        }
+
+        private void LateUpdate()
+        {
+            Vector2 currentPos = transform.position;
+            float currentRot = transform.eulerAngles.z;
+
+            if (currentPos != lastPosition || !Mathf.Approximately(currentRot, lastZRotation))
+            {
+                lastPosition = currentPos;
+                lastZRotation = currentRot;
+                MarkDirty();
+            }
+        }
 
         public abstract GameObject Detect();
-
-        private void Start()
-        {
-            if (autoActivate && detectionCoroutine == null)
-                detectionCoroutine = StartCoroutine(DetectionCoroutine());
-        }
-
-        private IEnumerator DetectionCoroutine()
-        {
-            bool end = false;
-            while (autoActivate && !end)
-            {
-                float timeInterval = detectionInterval > 0 ? detectionInterval : Time.deltaTime;
-                yield return new WaitForSecondsRealtime(timeInterval);
-                GameObject game = Detect();
-                if (game != null)
-                    OnSensorDetect.Invoke(game);
-            }
-        }
-
-        public bool StartDetection()
-        {
-            if (detectionCoroutine != null)
-                Start();
-            return detectionCoroutine != null;
-        }
-
-        public void StopDetection()
-        {
-            if (detectionCoroutine != null)
-            {
-                StopCoroutine(detectionCoroutine);
-                detectionCoroutine = null;
-            }
-        }
 
     }
 }

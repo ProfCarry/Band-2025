@@ -15,7 +15,12 @@ namespace Band.Components
         private bool autostart;
 
         [SerializeField]
-        private UnityEvent timeoutHandler;
+        private bool oneShot;
+
+        [SerializeField]
+        private UnityEvent onTimeout;
+
+        public UnityEvent OnTimeout { get { return onTimeout; } }
 
         public float CurrentTime { get; private set; }
 
@@ -57,12 +62,12 @@ namespace Band.Components
 
         public void AddTimeoutListener(UnityAction listener)
         {
-            timeoutHandler.AddListener(listener);
+            onTimeout.AddListener(listener);
         }
 
         private void Awake()
         {
-            timeoutHandler = new UnityEvent();
+            onTimeout = new UnityEvent();
         }
 
         // Start
@@ -83,8 +88,10 @@ namespace Band.Components
                 CurrentTime += Time.deltaTime;
                 if (CurrentTime >= time)
                 {
-                    Stop();
-                    timeoutHandler.Invoke();
+                    if(oneShot)
+                        Stop();
+                    else CurrentTime = 0;
+                    onTimeout.Invoke();
                 }
             }
             

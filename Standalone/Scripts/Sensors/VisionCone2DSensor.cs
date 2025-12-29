@@ -1,90 +1,90 @@
 using UnityEngine;
-using Band.Extensions;
-using Unity.VisualScripting;
-using UnityEngine.UIElements;
+
+
+
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 namespace Band.Sensor
 {
-    public class VisionCone2DSensor : SensorBase
+    [RequireComponent(typeof(CircleCollider2D))]
+    public class VisionCone2DSensor : Sensor2DBase
     {
         [SerializeField]
         private float maxLength;
 
-        private float length;
-
         [SerializeField]
-        [Range(0f, 90f)]
+        [Range(0f, 180f)]
         private float maxAngle;
 
-        private float angle;
 
-        [SerializeField]
-        private bool usedFixedLength = false;
+        private CircleCollider2D circleCollider;
 
-        [SerializeField]
-        private bool usedFixedAngle = false;
+        private void Awake()
+        {
+           circleCollider=this.GetComponent<CircleCollider2D>();
+           circleCollider.isTrigger = true;
+           circleCollider.radius=maxLength;
+        }
+
+        private bool IsVisible(Collider2D target)
+        {
+            Vector2 direction = (target.transform.position - transform.position).normalized;
+            float angleToTarget = Vector2.Angle(transform.right, direction);
+            if (angleToTarget > maxAngle * 0.5f)
+                return false;
+            float distance = Vector2.Distance(transform.position, target.transform.position);
+            RaycastHit2D hit = Physics2D.Raycast(
+                transform.position,
+                direction,
+                distance,
+                OcclusionMask
+            );
+            return hit.collider == null;
+        }
 
         public override GameObject Detect()
         {
-            if (!usedFixedLength)
+            if (!dirty || candidates.Count == 0)
+                return null;
+            dirty = false;
+            foreach(Collider2D target in candidates)
             {
-                RaycastHit2D hit = Physics2D.Raycast(this.transform.position, this.transform.right, maxLength);
-                if (hit)
-                {
-                    length = Vector3.Distance(hit.transform.position, this.transform.position);
-                    if (length > maxLength)
-                        length = maxLength;
-                }
-                else length = maxLength;
+                if (target == null) continue;
+                if (!this.IsVisible(target)) continue;
+                return target.gameObject;
             }
-            else length = maxLength;
-            if (!usedFixedAngle)
-                angle = maxAngle / length;
-            else angle = maxAngle;
-            Collider2D collider = Physics2D.OverlapCircle(this.transform.position,length,DetectionMask);
-
-            GameObject gameObject = null;
-            if (collider != null)
-            {
-                Vector3 direction = (collider.transform.position - this.transform.position).normalized;
-                float angle = Vector3.Angle(this.transform.right, direction);
-                if (Mathf.Abs(angle) < this.angle / 2)
-                    gameObject = collider.gameObject;
-            }
-            return gameObject;
+            return null;
         }
 
+
+
+#if UNITY_EDITOR
         private void OnDrawGizmos()
         {
-#if UNITY_EDITOR
-            GameObject game=Detect();
-            Handles.color = game==null ? Color.red : Color.green;
-            Vector3 origin = this.transform.position;
-            Vector3 forward = this.transform.right;
-            Vector3 leftDirection = Quaternion.AngleAxis(-angle / 2, Vector3.forward) * forward;
-            Vector3 rightDirection = Quaternion.AngleAxis(angle / 2, Vector3.forward) * forward;
-            Vector3 leftPoint = origin + leftDirection * length;
-            Vector3 rightPoint = origin + rightDirection * length;
-            Vector3 middlePoint = origin + this.transform.right * length;
-            Vector3 leftMiddlePoint = origin + (leftDirection + this.transform.right).normalized * length;
-            Vector3 rightMiddlePoint = origin + (rightDirection + this.transform.right).normalized * length;
-            Vector3[] vertices = new Vector3[]
-            {
-                origin,
-                leftPoint,
-                leftMiddlePoint,
-                middlePoint,
-                rightMiddlePoint,
-                rightPoint
-            };
-            Handles.DrawAAConvexPolygon(vertices);
-            Handles.color = Color.black;
-            //Handles.DrawAAPolyLine(origin, leftPoint, rightPoint, origin);
-#endif
-        }
+            Vector3 origin = transform.position;
+            Vector3 forward = transform.right;
 
+            int segments = 20; // higher = smoother cone
+            float halfAngle = maxAngle / 2f;
+
+            Vector3[] vertices = new Vector3[segments + 2];
+            vertices[0] = origin; // cone tip
+
+            for (int i = 0; i <= segments; i++)
+            {
+                float angle = -halfAngle + (maxAngle / segments) * i;
+                Vector3 dir = Quaternion.AngleAxis(angle, Vector3.forward) * forward;
+                vertices[i + 1] = origin + dir * maxLength;
+            }
+
+            Handles.color = lastDetectedObject != null ? new Color(0, 1, 0, 0.5f) : new Color(1, 0, 0, 0.5f);
+            Handles.DrawAAConvexPolygon(vertices);
+        }
+#endif
     }
+
+
 }
