@@ -62,18 +62,13 @@ namespace Band.Sensor
             dirty = false;
         }
 
-        private void LateUpdate()
+        private void OnTriggerStay2D(Collider2D collision)
         {
-            Vector2 currentPos = transform.position;
-            float currentRot = transform.eulerAngles.z;
-
-            if (currentPos != lastPosition || !Mathf.Approximately(currentRot, lastZRotation))
-            {
-                lastPosition = currentPos;
-                lastZRotation = currentRot;
+            if(candidates.Contains(collision))
                 MarkDirty();
-            }
         }
+
+
 
         public abstract GameObject Detect();
 
